@@ -67,6 +67,30 @@ func TestAppGetAccessToken(t *testing.T) {
 	}
 }
 
+func TestAppGetAccessTokenWithClientCredentialsGrant(t *testing.T) {
+	setup()
+	defer teardown()
+
+	httpmock.RegisterResponder("POST", "https://fooshop.myshopify.com/admin/oauth/access_token",
+		httpmock.NewStringResponder(200, `{"access_token":"footoken","scope":"read_products","expires_in":86399}`))
+
+	app.Client = client
+	token, err := app.GetAccessTokenWithClientCredentialsGrant(context.Background(), "fooshop")
+	if err != nil {
+		t.Fatalf("App.GetAccessTokenWithClientCredentialsGrant(): %v", err)
+	}
+
+	if token.AccessToken != "footoken" {
+		t.Errorf("Token = %v, expected footoken", token.AccessToken)
+	}
+	if token.Scope != "read_products" {
+		t.Errorf("Scope = %v, expected read_products", token.Scope)
+	}
+	if token.ExpiresIn != 86399 {
+		t.Errorf("ExpiresIn = %v, expected 86399", token.ExpiresIn)
+	}
+}
+
 func TestAppGetAccessTokenError(t *testing.T) {
 	setup()
 	defer teardown()
