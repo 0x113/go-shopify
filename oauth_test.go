@@ -91,6 +91,39 @@ func TestAppGetAccessTokenWithClientCredentialsGrant(t *testing.T) {
 	}
 }
 
+func TestAppGetAccessTokenWithClientCredentialsGrantError(t *testing.T) {
+	setup()
+	defer teardown()
+
+	// Case 1: client.Do returns error (e.g. 404)
+	httpmock.RegisterResponder("POST", "https://fooshop.myshopify.com/admin/oauth/access_token",
+		httpmock.NewStringResponder(404, `{"errors": "application_cannot_be_found"}`))
+
+	app.Client = client
+	expectedError := errors.New("application_cannot_be_found")
+
+	token, err := app.GetAccessTokenWithClientCredentialsGrant(context.Background(), "fooshop")
+	if err == nil || err.Error() != expectedError.Error() {
+		t.Errorf("Expected error %s got error %s", expectedError.Error(), err.Error())
+	}
+	if token != nil && token.AccessToken != "" {
+		t.Errorf("Expected nil token received %v", token.AccessToken)
+	}
+
+	expectedError = errors.New("parse ://example.com: missing protocol scheme")
+	oldPath := accessTokenRelPath
+	accessTokenRelPath = "://example.com"
+	defer func() { accessTokenRelPath = oldPath }()
+
+	token, err = app.GetAccessTokenWithClientCredentialsGrant(context.Background(), "fooshop")
+	if err == nil || !strings.Contains(err.Error(), "missing protocol scheme") {
+		t.Errorf("Expected error %s got error %s", expectedError.Error(), err.Error())
+	}
+	if token != nil {
+		t.Errorf("Expected nil token received %v", token)
+	}
+}
+
 func TestAppGetAccessTokenError(t *testing.T) {
 	setup()
 	defer teardown()
